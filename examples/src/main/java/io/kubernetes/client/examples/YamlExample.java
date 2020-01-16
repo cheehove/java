@@ -16,6 +16,7 @@ import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
+import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1DeleteOptions;
 import io.kubernetes.client.openapi.models.V1Pod;
@@ -23,10 +24,13 @@ import io.kubernetes.client.openapi.models.V1PodBuilder;
 import io.kubernetes.client.openapi.models.V1Service;
 import io.kubernetes.client.openapi.models.V1ServiceBuilder;
 import io.kubernetes.client.openapi.models.V1Status;
+import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.Config;
+import io.kubernetes.client.util.KubeConfig;
 import io.kubernetes.client.util.Yaml;
-import java.io.File;
-import java.io.IOException;
+import okhttp3.Call;
+
+import java.io.*;
 import java.util.HashMap;
 
 /**
@@ -54,7 +58,7 @@ public class YamlExample {
             .endContainer()
             .endSpec()
             .build();
-    System.out.println(Yaml.dump(pod));
+    Yaml.dump(pod);
 
     V1Service svc =
         new V1ServiceBuilder()
@@ -73,37 +77,94 @@ public class YamlExample {
             .endPort()
             .endSpec()
             .build();
-    System.out.println(Yaml.dump(svc));
+    Yaml.dump(svc);
 
     // Read yaml configuration file, and deploy it
-    ApiClient client = Config.defaultClient();
+//    ApiClient client = Config.defaultClient();
+    String kubeConfigPath = System.getProperty("user.home") + "/.kube/config";
+    ApiClient client =
+            ClientBuilder.kubeconfig(KubeConfig.loadKubeConfig(new FileReader(kubeConfigPath))).build();
     Configuration.setDefaultApiClient(client);
 
     //  See issue #474. Not needed at most cases, but it is needed if you are using war
     //  packging or running this on JUnit.
-    Yaml.addModelMap("v1", "Service", V1Service.class);
+//    Yaml.addModelMap("v1", "Service", V1Service.class);
 
     // Example yaml file can be found in $REPO_DIR/test-svc.yaml
-    File file = new File("test-svc.yaml");
+//    File file = new File("test-svc.yaml");
+
+      File file = null;
+      FileOutputStream fos = null;
+      try {
+          // Create temp file.
+          file = File.createTempFile("test-svc", ".yaml");
+
+          // Delete temp file when program exits.
+          file.deleteOnExit();
+
+          // Write to temp file
+          BufferedWriter out = new BufferedWriter(new FileWriter(file));
+          out.write("apiVersion: v1");
+          out.newLine();
+          out.write("kind: Service");
+          out.newLine();
+          out.write("metadata:");
+          out.newLine();
+          out.write("  name: test-service");
+          out.newLine();
+          out.write("spec:");
+          out.newLine();
+          out.write("  type: ClusterIP");
+          out.newLine();
+          out.write("  selector:");
+          out.newLine();
+          out.write("    app: test-service");
+          out.newLine();
+          out.write("  ports:");
+          out.newLine();
+          out.write("  - name: port-of-container");
+          out.newLine();
+          out.write("    port: 8080");
+          out.flush();
+          out.close();
+      } catch (IOException e) {
+          e.printStackTrace();
+      }
+
+
+
+
     V1Service yamlSvc = (V1Service) Yaml.load(file);
+
+      System.out.println(yamlSvc.toString());
 
     // Deployment and StatefulSet is defined in apps/v1, so you should use AppsV1Api instead of
     // CoreV1API
     CoreV1Api api = new CoreV1Api();
-    V1Service createResult = api.createNamespacedService("default", yamlSvc, null, null, null);
+      V1Service createResult= null;
 
-    System.out.println(createResult);
+    try {
+        Call localVarCall = api.createNamespacedServiceCall("cheehove", yamlSvc, null, null, null, null);
+        System.out.println("call "+localVarCall.request());
+        createResult = api.createNamespacedService("cheehove", yamlSvc, null, null, null);
+    }catch (ApiException a){
+        System.out.println(a.getCode());
+        System.out.println(a.getResponseBody());
+    }
+      System.out.println("======================= Yaml Dump create ====================");
+    System.out.println(createResult.toString());
+      System.out.println("======================= Yaml Dump created ====================");
 
-    V1Status deleteResult =
-        api.deleteNamespacedService(
-            yamlSvc.getMetadata().getName(),
-            "default",
-            null,
-            null,
-            null,
-            null,
-            null,
-            new V1DeleteOptions());
-    System.out.println(deleteResult);
+//    V1Status deleteResult =
+//        api.deleteNamespacedService(
+//            yamlSvc.getMetadata().getName(),
+//            "cheehove",
+//            null,
+//            null,
+//            null,
+//            null,
+//            null,
+//            new V1DeleteOptions());
+//    System.out.println(deleteResult);
   }
 }

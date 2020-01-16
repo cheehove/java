@@ -1,0 +1,57 @@
+apiVersion: mz.digitalroute.com/v1alpha1
+kind: WorkflowDeployment
+metadata:
+  name: simple
+spec:
+  workflowSets:
+    - template: operator.op_realtime_wf13
+      instances:
+      - name: processing-1
+        #groupTag: cs_tag1
+        parameters: |
+          {
+            "DATA": "input-1"
+          }
+      - name: processing-2
+        #groupTag: cs_tag1
+        parameters: |
+          {
+            "DATA": "input-1"
+          }
+      ec:
+        strategy: Dedicated
+        name: simple
+        spec:
+          image: dtr.digitalroute.com/dr/mz10:10.0.0.0-feature-XE-765-PoC-Platform-to-k8s-latest-ec
+          command: ["/opt/mz/entrypoint/docker-entrypoint.sh"]
+          config:
+            executioncontext.xml: |
+              <?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
+              <configlist prompt="true">
+                <config name="REPLACE_ME_EC_NAME">
+                  <startclass class="com.digitalroute.picostart.PicoStart"/>
+                  <jdkarg value="-XX:MaxDirectMemorySize=256M"/>
+                  <jdkarg value="-XX:MaxMetaspaceSize=196M"/>
+                  <jdkarg value="-Xms64M"/>
+                  <jdkarg value="-Xmx256M"/>
+                  <jdkarg value="-server" vendor="sun,hp"/>
+                  <classpath path="lib/picostart.jar"/>
+                  <property name="ec.backlog.dir" value="${mz.home}/tmp"/>
+                  <property name="ec.shutdown.time" value="60000"/>
+                  <property name="ec.webserver.port" value="9090"/>
+                  <property name="mz.webserver.xframeoptions" value="DENY"/>
+                  <property name="pico.bootstrapclass" value=" com.digitalroute.wf.pico.ECSAHTTPD"/>
+                  <property name="pico.groups" value=""/>
+                  <property name="pico.stderr" value="log/${config.name}.log"/>
+                  <property name="pico.stdout" value="log/${config.name}.log"/>
+                  <property name="pico.type" value="ec"/>
+                </config>
+              </configlist>
+          resources:
+            requests:
+              cpu:
+                100m
+              memory:
+                50Mi
+          ports:
+            - containerPort: 9000

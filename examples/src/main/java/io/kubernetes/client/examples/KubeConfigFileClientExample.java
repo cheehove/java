@@ -17,12 +17,14 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
-import io.kubernetes.client.openapi.models.V1Pod;
-import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.KubeConfig;
+
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetAddress;
 
 /**
  * A simple example of how to use the Java API from an application outside a kubernetes cluster
@@ -36,7 +38,8 @@ public class KubeConfigFileClientExample {
   public static void main(String[] args) throws IOException, ApiException {
 
     // file path to your KubeConfig
-    String kubeConfigPath = "~/.kube/config";
+    String kubeConfigPath = System.getProperty("user.home") + "/.kube/config";
+
 
     // loading the out-of-cluster config, a kubeconfig from file-system
     ApiClient client =
@@ -49,10 +52,25 @@ public class KubeConfigFileClientExample {
     CoreV1Api api = new CoreV1Api();
 
     // invokes the CoreV1Api client
-    V1PodList list =
-        api.listPodForAllNamespaces(null, null, null, null, null, null, null, null, null);
-    for (V1Pod item : list.getItems()) {
+//    V1PodList list =
+//        api.listPodForAllNamespaces(null, null, null, null, null, null, null, null, null);
+//    for (V1Pod item : list.getItems()) {
+//      System.out.println(item.getMetadata().getName());
+//    }
+
+//    create namespace
+//    V1Namespace namespace = new V1Namespace();
+//    V1ObjectMeta meta = new V1ObjectMeta();
+//    meta.setName("cheehove-test-create");
+//    namespace.setMetadata(meta);
+//    api.createNamespace(namespace,null,null,null);
+
+//    api.deleteNamespace("cheehove-test-create",null,null,null,null,null,new V1DeleteOptions());
+    V1NamespaceList list =
+            api.listNamespace(null,null, null, null, null,null, null, null, null);
+    for (V1Namespace item : list.getItems()) {
       System.out.println(item.getMetadata().getName());
     }
+
   }
 }
